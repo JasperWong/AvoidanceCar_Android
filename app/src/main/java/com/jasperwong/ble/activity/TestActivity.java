@@ -39,6 +39,7 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
     private static int i=0;
     private TextView PShow;
     private TextView PwmShow;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -65,7 +66,7 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
         if(id==R.id.btn_send_view){
             String Tx;
             Tx=ed_send.getText().toString();
-            mCharacteristic.setValue(Tx+'\n');
+            mCharacteristic.setValue(Tx+"\n");
             mBluetoothLeService.writeCharacteristic(mCharacteristic);
         }
     }
@@ -134,20 +135,20 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
 //                Toast.makeText(MainActivity.this,"断开连接",Toast.LENGTH_LONG).show();
             } else if (BLEService.ACTION_DATA_AVAILABLE.equals(action)) {
 
-
-
                 String Rx=intent.getStringExtra(BLEService.EXTRA_DATA);
                 if(BLEService.RecIsDone) {
+
                     String FrontDistance = intent.getStringExtra(BLEService.FRONT_DATA);
+                    if(FrontDistance!=null) FrontShow.setText("前: "+FrontDistance);
                     String LeftDistance = intent.getStringExtra(BLEService.LEFT_DATA);
+                    if(LeftDistance!=null)  LeftShow.setText("左: "+LeftDistance);
                     String RightDistance = intent.getStringExtra(BLEService.RIGHT_DATA);
+                    if(RightDistance!=null) RightShow.setText("右: "+RightDistance);
                     String PData = intent.getStringExtra(BLEService.P_DATA);
+                    if(PData!=null) PShow.setText("kP: "+PData);
                     String PwmData = intent.getStringExtra(BLEService.PWM_DATA);
-                    FrontShow.setText("前: "+FrontDistance);
-                    LeftShow.setText("左: "+LeftDistance);
-                    RightShow.setText("右: "+RightDistance);
-                    PShow.setText("kP: "+PData);
-                    PwmShow.setText("Pwm: "+PwmData);
+                    if(PwmData!=null)   PwmShow.setText("Pwm: "+PwmData);
+
                     BLEService.RecIsDone = false;
                     BLEService.rec_state = BLEService.RecState.WAIT_F;
                     Log.d("Rx_test","Front:"+FrontDistance);
@@ -162,9 +163,6 @@ public class TestActivity extends AppCompatActivity implements View.OnClickListe
                     show="";
                     i=0;
                 }
-
-
-
             } else if(BLEService.ACTION_DATA_READ.equals(action)){
 
             }

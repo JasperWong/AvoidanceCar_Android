@@ -91,23 +91,31 @@ public class BLEService extends Service
     public final static String PWM_DATA =
             "com.example.bluetooth.le.PWM_DATA";
 
+    public final static int REC_FRONT=0;
+    public final static int REC_P=1;
+    public final static int REC_NONE=2;
+
+    public static int REC_WHAT=0;
 
     public  enum  RecState{
+        WAIT_k,
         WAIT_F,
         WAIT_COLON,
-        WAIT_BLANK1,
+        WAIT_FRONT_DATA,
         WAIT_L,
-        WAIT_BLANK2,
+        WAIT_lEFT_DATA,
         WAIT_R,
-        WAIT_BLANK3,
+        WAIT_RIGHT_DATA,
+        WAIT_P_DATA,
         WAIT_P,
-        WAIT_BLANK4,
+        WAIT_PWM_DATA,
         WAIT_p,
         WAIT_NEWLINE,
         PARSE_PENDING;
     };
 
     public static RecState rec_state=RecState.WAIT_F;
+    public static RecState rec_state2=RecState.WAIT_F;
 
     public static boolean RecIsDone=false;
 
@@ -232,82 +240,118 @@ public class BLEService extends Service
         final StringBuilder Pwm=new StringBuilder();
 
 //        Log.d("usart",data+"");
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                // 处理具体的逻辑
+            }
+
+        }).start();
+
+        new Thread(new Runnable() {
+
+            @Override
+            public void run() {
+                // 处理具体的逻辑
+            }
+
+        }).start();
+
         if (!RecIsDone&&data != null && data.length > 0) {
            for(byte byteChar :data){
                 switch(rec_state){
                     case WAIT_F: {
                         if(byteChar=='F') rec_state = RecState.WAIT_COLON;
-                        else rec_state=RecState.WAIT_F;
+                        else if(byteChar=='k')  rec_state=RecState.WAIT_P;
                         break;
                     }
                     case WAIT_COLON:{
-                        if(byteChar==':')   rec_state = RecState.WAIT_BLANK1;
+                        if(byteChar==':')   {
+                            Front.delete(0,Front.length());
+                            Left.delete(0,Left.length());
+                            Right.delete(0,Right.length());
+                            REC_WHAT=REC_FRONT;
+                            rec_state = RecState.WAIT_FRONT_DATA;
+                        }
                         break;
                     }
-
-                    case WAIT_BLANK1:{
+                    case WAIT_FRONT_DATA:{
                         if(byteChar==' ') rec_state=RecState.WAIT_L;
                         else Front.append(String.format("%c",byteChar));
                         break;
                     }
                     case WAIT_L: {
-                        if(byteChar=='L') rec_state = RecState.WAIT_BLANK2;
+                        if(byteChar=='L') rec_state = RecState.WAIT_lEFT_DATA;
                         else rec_state=RecState.WAIT_L;
                         break;
                     }
-                    case WAIT_BLANK2:{
+                    case WAIT_lEFT_DATA:{
                         if(byteChar==' ') rec_state=RecState.WAIT_R;
                         else Left.append(String.format("%c",byteChar));
                         break;
                     }
                     case WAIT_R: {
-                        if(byteChar=='R') rec_state = RecState.WAIT_BLANK3;
+                        if(byteChar=='R') rec_state = RecState.WAIT_RIGHT_DATA;
                         else rec_state=RecState.WAIT_R;
                         break;
                     }
-                    case WAIT_BLANK3:{
-                        if(byteChar==' ') rec_state=RecState.WAIT_P;
+                    case WAIT_RIGHT_DATA:{
+                        if(byteChar==' ') {
+                            FrontDistance=Front.toString();
+                            LeftDistance=Left.toString();
+                            RightDistance=Right.toString();
+                            intent.putExtra(FRONT_DATA,FrontDistance);
+                            intent.putExtra(LEFT_DATA,LeftDistance);
+                            intent.putExtra(RIGHT_DATA,RightDistance);
+                            rec_state=RecState.WAIT_NEWLINE;
+                        }
                             else Right.append(String.format("%c",byteChar));
                         break;
                     }
                     case WAIT_P:{
-                        if(byteChar=='P') rec_state=RecState.WAIT_BLANK4;
+                        if(byteChar=='P') {
+                            P.delete(0,P.length());
+                            Pwm.delete(0,Pwm.length());
+                            REC_WHAT=REC_P;
+                            rec_state=RecState.WAIT_P_DATA;
+                        }
                         else rec_state=RecState.WAIT_P;
                         break;
                     }
-                    case WAIT_BLANK4:{
+                    case WAIT_P_DATA:{
                         if(byteChar==' ') rec_state=RecState.WAIT_p;
                         else P.append(String.format("%c",byteChar));
                         break;
                     }
                     case WAIT_p:{
-                        if(byteChar=='p') rec_state=RecState.WAIT_NEWLINE;
+                        if(byteChar=='p') rec_state=RecState.WAIT_PWM_DATA;
                         else rec_state=RecState.WAIT_p;;
                         break;
                     }
+
+                    case WAIT_PWM_DATA:{
+                        if(byteChar==' '){
+                            PData=P.toString();
+                            PwmData=Pwm.toString();
+                            intent.putExtra(P_DATA,PData);
+                            intent.putExtra(PWM_DATA,PwmData);
+                            rec_state=RecState.WAIT_NEWLINE;
+                        }
+                        else    Pwm.append(String.format("%c",byteChar));
+                    }
+
+
                     case WAIT_NEWLINE:{
                         if(byteChar=='\n'||byteChar=='\r') rec_state=RecState.PARSE_PENDING;
-                        else    Pwm.append(String.format("%c",byteChar));
                         break;
                     }
+
+
+
                     case PARSE_PENDING: {
                         RecIsDone=true;
-                        FrontDistance=Front.toString();
-                        LeftDistance=Left.toString();
-                        RightDistance=Right.toString();
-                        PData=P.toString();
-                        PwmData=Pwm.toString();
-                        Log.d("rx_init","front:"+FrontDistance+" "+"left:"+LeftDistance+" "+"right:"+RightDistance);
-                        intent.putExtra(FRONT_DATA,FrontDistance);
-                        intent.putExtra(LEFT_DATA,LeftDistance);
-                        intent.putExtra(RIGHT_DATA,RightDistance);
-                        intent.putExtra(P_DATA,PData);
-                        intent.putExtra(PWM_DATA,PwmData);
-                        Front.delete(0,Front.length());
-                        Left.delete(0,Left.length());
-                        Right.delete(0,Right.length());
-                        P.delete(0,P.length());
-                        Pwm.delete(0,Pwm.length());
+//                        Log.d("rx_init","front:"+FrontDistance+" "+"left:"+LeftDistance+" "+"right:"+RightDistance);
                         rec_state=RecState.WAIT_F;
                         break;
                     }
@@ -319,7 +363,7 @@ public class BLEService extends Service
                 }
 
 
-            }
+           }
 
 
 //            for(byte byteChar : data)
